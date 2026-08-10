@@ -13,7 +13,7 @@ The question the whole analysis serves:
 ```
 biological-question-to-data-science/
 ├── exploratory_data_analysis.ipynb   the analysis, start to finish (31 code cells, outputs saved)
-├── data/                             created by the notebook — not source code
+├── data/                             created by the notebook - not source code
 │   ├── wdbc.zip                      as downloaded from UCI
 │   ├── wdbc.data                     569 rows, 32 comma-separated fields, no header
 │   └── wdbc.names                    the documentation, which is what makes the data readable
@@ -61,21 +61,21 @@ Step 3 is the one people skip, and it produces the most baffling error in early 
 
 `exploratory_data_analysis.ipynb` goes from a URL to a dataset you understand, in seven short sections:
 
-- **0. Set up your environment** — one virtual environment per project, and how to point Jupyter at it
-- **1. Get the data** — download the zip from UCI, unpack it, check you got data and not an error page
-- **2. Look at it before you load it** — `head`, `tail`, `wc`, `grep`, `cut`, `awk`, `sed`, and the documentation
-- **3. Hello world, with real data** — read the file with plain Python before reaching for a library
-- **4. First look in pandas** — supply the column names, load, check shape and dtypes
-- **5. Summary statistics** — missing values, `describe()`, group means by diagnosis
-- **6. Explore the biology in the data** — histogram, box plots, scatter, correlation matrix
+- **0. Set up your environment** - one virtual environment per project, and how to point Jupyter at it
+- **1. Get the data** - download the zip from UCI, unpack it, check you got data and not an error page
+- **2. Look at it before you load it** - `head`, `tail`, `wc`, `grep`, `cut`, `awk`, `sed`, and the documentation
+- **3. Hello world, with real data** - read the file with plain Python before reaching for a library
+- **4. First look in pandas** - supply the column names, load, check shape and dtypes
+- **5. Summary statistics** - missing values, `describe()`, group means by diagnosis
+- **6. Explore the biology in the data** - histogram, box plots, scatter, correlation matrix
 
-Section 2 is the one most tutorials skip, and it is how you discover that this file has **no header row** and that field 2 is the diagnosis — neither of which is guessable.
+Section 2 is the one most tutorials skip, and it is how you discover that this file has **no header row** and that field 2 is the diagnosis - neither of which is guessable.
 
 The notebook is committed with its outputs saved, so it reads without running.
 
 ## The data
 
-The **Wisconsin Diagnostic Breast Cancer** dataset: 569 samples, one per fine-needle-aspirate image, one image per patient. 30 features — ten nuclear measurements, each reported as its mean across nuclei, its standard error, and its "worst" value (the average of the three largest). 357 benign, 212 malignant. No missing values.
+The **Wisconsin Diagnostic Breast Cancer** dataset: 569 samples, one per fine-needle-aspirate image, one image per patient. 30 features - ten nuclear measurements, each reported as its mean across nuclei, its standard error, and its "worst" value (the average of the three largest). 357 benign, 212 malignant. No missing values.
 
 These are measurements of **cell nuclei, not of the tumour**. A `radius_mean` of 17.99 is not an 18 mm lump; it is the average size of nuclei in a microscope image.
 
@@ -87,7 +87,7 @@ https://archive.ics.uci.edu/static/public/17/breast+cancer+wisconsin+diagnostic.
 
 The extracted `wdbc.data` should be 124,103 bytes, md5 `c6dd5a2909808f3a901cf00cfd8dfff0`.
 
-**If the download fails** — UCI's servers are not always reliable — the two files are also served individually at the older path, which needs no unzipping:
+**If the download fails** - UCI's servers are not always reliable - the two files are also served individually at the older path, which needs no unzipping:
 
 ```bash
 BASE="https://archive.ics.uci.edu/ml/machine-learning-databases/breast-cancer-wisconsin"
@@ -103,9 +103,9 @@ This is a teaching set from one hospital in the early 1990s, with no patient con
 
 ## Citation
 
-Dataset — Wolberg, W., Mangasarian, O., Street, N., & Street, W. (1993). *Breast Cancer Wisconsin (Diagnostic)*. UCI Machine Learning Repository. https://doi.org/10.24432/C5DW2B
+Dataset - Wolberg, W., Mangasarian, O., Street, N., & Street, W. (1993). *Breast Cancer Wisconsin (Diagnostic)*. UCI Machine Learning Repository. https://doi.org/10.24432/C5DW2B
 
-Method — Street, W. N., Wolberg, W. H., & Mangasarian, O. L. (1993). Nuclear feature extraction for breast tumor diagnosis. *Electronic Imaging*. https://doi.org/10.1117/12.148698
+Method - Street, W. N., Wolberg, W. H., & Mangasarian, O. L. (1993). Nuclear feature extraction for breast tumor diagnosis. *Electronic Imaging*. https://doi.org/10.1117/12.148698
 
 Licence terms are stated on the [dataset page](https://archive.ics.uci.edu/dataset/17/breast+cancer+wisconsin+diagnostic).
 
