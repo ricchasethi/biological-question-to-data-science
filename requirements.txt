@@ -1,0 +1,25 @@
+# The packages this project asks for directly. Edit this file; regenerate the lock.
+#
+#     pip install -r requirements.txt
+#
+# Every version is pinned. `pandas` records nothing about what ran; `pandas==3.0.5`
+# records what actually produced the result. A library upgrade can change a default,
+# leave the code running without error, and quietly move a published number — so
+# upgrade deliberately: change a version here, reinstall, run pytest, and check the
+# headline results before committing.
+#
+# After any change here:  pip freeze > requirements.lock.txt
+
+# --- the analysis ---
+pandas==3.0.5           # the DataFrame
+numpy==2.5.2            # arrays underneath pandas and scikit-learn; not an implementation detail
+scipy==1.18.0           # t-tests and Mann-Whitney tests
+scikit-learn==1.9.0     # splits, pipelines, logistic regression, cross-validation, metrics, PCA
+matplotlib==3.11.1      # every figure
+
+# --- reading and running the notebooks ---
+jupyterlab==4.6.2       # the notebook interface
+ipykernel==7.3.0        # lets Jupyter run code inside this environment
+
+# --- checking that it still works ---
+pytest==9.1.1           # the tests that stand in for laboratory controls

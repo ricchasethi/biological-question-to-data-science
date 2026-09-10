@@ -1,0 +1,83 @@
+# Continuous integration: make a computer that has never met this laptop prove
+# the analysis runs.
+#
+# The first production question is "could someone else reproduce this?" A CI
+# runner IS someone else. It has none of the files you forgot to commit, none of
+# the packages you installed by hand two years ago, and no memory of anything you
+# did in a notebook. If the analysis runs here, that is evidence rather than
+# optimism.
+#
+# The badge in README.md is the visible half of this file.
+
+name: reproduce
+
+# WHEN this runs. Every push, and every pull request aimed at main. Cheap enough
+# to run on all of them, and a check that only runs sometimes is a check you stop
+# believing.
+on:
+  push:
+  pull_request:
+    branches: [main]
+
+jobs:
+  reproduce:
+    name: reproduce the published numbers
+    runs-on: ubuntu-latest   # a fresh, empty machine, thrown away afterwards
+
+    steps:
+      # 1. Get the repository. Note what this does NOT get: anything that is not
+      #    committed. That is the whole value of the step -- a file that exists
+      #    only on your laptop disappears here, loudly.
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      # 2. Python, pinned to the version requirements.lock.txt was captured on.
+      #    There is deliberately no test matrix here. A lock file pins every
+      #    transitive dependency for ONE interpreter; testing 3.11 and 3.13 as
+      #    well would need a lock file each. Pinning and matrix testing are
+      #    opposite bets, and an article about reproducibility takes the first.
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.lock.txt
+
+      # 3. Build the environment by following this project's own README, command
+      #    for command. CI that runs a private set-up path proves that the
+      #    private path works. Running the documented one proves the documentation
+      #    is true, which is the thing a reader actually needs.
+      - name: Build the environment from the lock file
+        run: |
+          python -m venv .venv
+          .venv/bin/pip install -r requirements.lock.txt
+
+      # 4. Is the raw data the file the articles were written from? This must
+      #    never be `make data`: that would download from UCI on every push,
+      #    which hammers someone else's server and makes the build depend on
+      #    their uptime. The data is committed, so this is offline and instant.
+      - name: Verify the raw data
+        run: make verify
+
+      # 5. The controls on the code. Twenty-one of them, about two seconds.
+      - name: Run the tests
+        run: make test
+
+      # 6. The analysis itself, end to end. This is the step that would catch a
+      #    module that imports fine on your laptop because of a stale .pyc, or a
+      #    path that only resolves in your home directory. It also re-reads the
+      #    three control patients, so a run that drifts fails the build.
+      - name: Run the analysis
+        run: make run
+
+      # 7. Keep the run manifest. Every CI run now leaves a downloadable record
+      #    naming the input by checksum, the commit, the environment and the
+      #    control readings -- a run record produced by a machine that has no
+      #    stake in the result.
+      - name: Keep the run manifest
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: run-manifest
+          path: results/
+          if-no-files-found: ignore

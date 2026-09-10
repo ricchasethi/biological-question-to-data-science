@@ -1,0 +1,13 @@
+# SHA-256 of the raw input files. Verify from the repository root with:
+#
+#     sha256sum -c data/checksums.sha256
+#
+# These two files ARE the input to every number in articles 2 and 3. A file
+# with the right name and different contents is the failure this guards against.
+#
+# The archive they came out of is deliberately not checked: UCI can re-zip the
+# same data and change the archive's digest without changing one byte of the
+# contents. Recorded here for provenance only —
+#   wdbc.zip  bc154869ef13f753f9e2b5a17e248cfe1ba4b6721db7c4da9f4880e40b05d3af
+d606af411f3e5be8a317a5a8b652b425aaf0ff38ca683d5327ffff94c3695f4a  data/wdbc.data
+840e04e3f20f8a5b326892f3b9cbc01c4cd6f7e6c597630b701ef6c0ac79f5ef  data/wdbc.names
