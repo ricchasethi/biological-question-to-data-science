@@ -1,0 +1,20 @@
+# Environments — never publish a virtualenv. Rebuild it from requirements.lock.txt.
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# Jupyter's autosave copies. Not the notebook, not history — just noise.
+.ipynb_checkpoints/
+
+# Per-run records, written by src/run.py. Every run leaves one and none are
+# overwritten, so these are yours and pile up locally -- they are not the
+# repository's to carry. results/ itself is created by the run.
+results/*.json
+
+# The fitted model, rebuilt by every run and identified by the checksum recorded
+# in that run's manifest. The manifest is the thing worth keeping, not the pickle.
+models/*.joblib
+
+# OS clutter
+.DS_Store
