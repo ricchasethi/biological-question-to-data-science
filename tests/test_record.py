@@ -9,6 +9,7 @@ future reader would need to reproduce a number.
 """
 
 import json
+from pathlib import Path
 
 import pytest
 from sklearn.linear_model import LogisticRegression
@@ -20,7 +21,7 @@ from src.controls import CONTROLS, controls_that_moved, read_controls
 from src.evaluate import held_out_results, referral_results
 from src.fetch_data import read_checksums
 from src.load_data import DATA_FILE, features_and_labels, load_data, validate
-from src.model import build_model, split_data
+from src.model import BAND, build_model, split_data
 
 
 @pytest.fixture(scope="module")
@@ -143,6 +144,53 @@ def test_a_run_writes_one_manifest_that_reads_back(fitted, somewhere_else):
     assert written["controls"]["readings"]["879523"]["passed"] is True
     assert written["referral"]["referred_for_review"] == 4
     assert all(written["environment"]["packages"].values())
+
+
+# --- the model card ---------------------------------------------------------
+
+# The label that travels with the model, for somebody who did not build it.
+MODEL_CARD = Path("MODEL_CARD.md")
+
+
+def test_the_model_card_states_the_numbers_this_code_produces(fitted):
+    """The label has to match the bottle.
+
+    A card carrying numbers the code no longer produces is worse than no card,
+    because it is the document somebody trusts instead of reading the source.
+    Every figure checked here is computed from this run rather than copied from
+    the prose, so the card cannot quietly fall out of date behind a passing suite.
+    """
+    X, X_test, y_test, model = fitted
+    results = held_out_results(model, X_test, y_test)
+    referral = referral_results(results["probabilities"], y_test)
+    checksums = {str(path): digest for path, digest in read_checksums().items()}
+    card = MODEL_CARD.read_text()
+
+    stated = [
+        f"{results['accuracy']:.1%}",                # deciding every patient
+        f"{results['recall']:.1%}",                  # the cancers it finds
+        f"{results['precision']:.1%}",
+        f"{referral['fraction_referred']:.1%}",      # sent to a pathologist
+        f"{referral['accuracy_automatic']:.1%}",     # of what it decides alone
+        f"{BAND[0]:.2f} to {BAND[1]:.2f}",           # the band, as the card writes it
+        checksums[DATA_FILE][:8],                    # the file it was trained on
+    ]
+
+    missing = [number for number in stated if number not in card]
+    assert missing == [], f"MODEL_CARD.md does not state {missing}"
+
+
+def test_the_model_card_lists_the_control_patients_and_their_readings():
+    """All three, to the six decimal places the controls are actually read to.
+
+    A card that names the controls without their expected readings tells a reader
+    that controls exist. It does not let them check one.
+    """
+    card = MODEL_CARD.read_text()
+
+    for patient, control in CONTROLS.items():
+        assert str(patient) in card, f"{patient} is not in the model card"
+        assert f"{control['expected']:.6f}" in card, f"{patient}'s reading is not stated"
 
 
 def _outcomes(model, X, X_test, y_test):

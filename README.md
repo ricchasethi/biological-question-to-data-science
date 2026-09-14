@@ -20,6 +20,7 @@ Article 3 is organised around one idea: **a model is an experiment, so it needs 
 biological-question-to-data-science/
 ├── exploratory_data_analysis.ipynb   article 2 - the data   (31 code cells, outputs saved)
 ├── data_to_model.ipynb               article 3 - the model  (45 code cells, outputs saved)
+├── MODEL_CARD.md                     the label that travels with the model
 ├── Makefile                          the commands, so nobody has to remember them
 ├── requirements.txt                  the packages this project asks for, pinned
 ├── requirements.lock.txt             the full resolved environment, all 107 packages
@@ -32,10 +33,10 @@ biological-question-to-data-science/
 │   ├── manifest.py                   the run record: what produced these numbers
 │   ├── style.py                      the figure colours and settings, fixed once
 │   └── run.py                        the whole analysis, one command, no clicking
-├── tests/                            the controls for the code - 27, in about 2 seconds
+├── tests/                            the controls for the code - 29, in about 2 seconds
 │   ├── test_data.py                  is this the right file, and does the contract hold?
 │   ├── test_analysis.py              the leakage guard, and the published numbers
-│   ├── test_record.py                do the controls notice, and is the run recorded?
+│   ├── test_record.py                do the controls notice, is the run recorded, is the card true?
 │   └── test_referral.py              the band, and the mistake it does not catch
 ├── data/                             the INPUT - read-only, checksummed
 │   ├── README.md                     where it came from, what it means, what the rules are
@@ -156,7 +157,7 @@ One rule is there because of the biology, and it is the reason this job needs a 
 make test
 ```
 
-Twenty-seven of them, in about two seconds. They check that the raw file is still the one the
+Twenty-nine of them, in about two seconds. They check that the raw file is still the one the
 articles were written from, that the column names are built in the order the file stores them,
 that the contract accepts the real data and rejects six specific ways of being wrong, that the
 scaler is inside the pipeline where it cannot leak, and that the published numbers - 97.3%
@@ -259,6 +260,26 @@ was worth keeping. Nothing there is ever overwritten, and neither `results/` nor
 committed: the run records are yours, and the model is rebuilt by the pipeline that records its
 checksum.
 
+## The model card: the label that travels with the model
+
+`MODEL_CARD.md` is the document somebody reads when they did not build this and have to decide
+whether to trust it. What the model does, what it was shown, what it requires as input, what it
+measurably achieves, where it must not be used, what it is known to get wrong, and what should
+make somebody look at it again.
+
+Two entries earn the file on their own. The first is patient **859983**: a cancer this model calls
+benign at P = 0.061 - 94% confident, and completely wrong. The referral band never reaches her.
+The second is that swapping two columns *within* a block - `radius_mean` and `texture_mean`, say -
+passes the data contract, returns a plausible accuracy, and moves neither the positive-call rate
+nor the referral rate enough to notice. Only the input checksum catches that, and a checksum
+exists for `data/wdbc.data` alone.
+
+A card that drifts away from the code is worse than no card, because it is the document people
+trust instead of reading the source. So the numbers in it are checked by the test suite: the
+held-out accuracy, the recall, the precision, the referral rate, the accuracy of the automatic
+decisions, the band, the input checksum and all three control readings are computed from the run
+and looked for in the file. Move a published number and the card fails with the analysis.
+
 ## Continuous integration: someone else's machine
 
 The badge at the top of this file is the only claim in this repository that was not made by me.
@@ -269,7 +290,7 @@ README tells you to run:
 
 ```bash
 make verify     # is the raw data the file the articles used?
-make test       # do the 27 controls still pass?
+make test       # do the 29 controls still pass?
 make run        # does the analysis run end to end?
 ```
 
