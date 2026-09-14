@@ -10,6 +10,7 @@ promise readers that their numbers will match exactly, and a seed that lives in
 only one cell is a seed nobody knows about.
 """
 
+import numpy as np
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import make_pipeline
@@ -21,6 +22,16 @@ SPLIT_SEED = 42
 # The probability above which a sample is called malignant. 0.5 by default, not
 # by argument -- see the threshold section of article 3.
 THRESHOLD = 0.5
+
+# The band in which the model is not allowed to answer.
+#
+# Chosen on CROSS-VALIDATED TRAINING predictions, never on the test set. Tuning a
+# referral band on held-out patients would be exactly the leak article 3 spends a
+# whole section on, committed at the last possible moment. See referral_table()
+# in evaluate.py, which is the code that chose it: 0.30-0.70 sits at the bend of
+# the curve, where the first few percent of referrals have bought most of the
+# errors and further widening starts sending easy cases to a human.
+BAND = (0.30, 0.70)
 
 
 def split_data(X, y):
@@ -48,3 +59,22 @@ def build_model():
         StandardScaler(),                   # learns means and SDs, from training data only
         LogisticRegression(max_iter=5000),  # enough iterations to converge properly
     )
+
+
+def decide(probabilities, band=BAND):
+    """Three outcomes, not two. "refer" is a real answer, not a failure to answer.
+
+    A model that must answer every case answers the ones it has no business
+    answering. Routing its least certain patients to a pathologist does not make
+    the model better -- every probability it produces is unchanged -- it makes the
+    *system* better, by sending uncertainty to someone qualified to resolve it.
+
+    The cost is real and lands on a person: 3.5% of patients referred is 350 extra
+    expert reviews per 10,000 slides. A band the pathologist cannot absorb is not
+    a safety feature, it is a queue.
+    """
+    low, high = band
+    return np.array([
+        "refer" if low <= p <= high else ("malignant" if p >= THRESHOLD else "benign")
+        for p in probabilities
+    ])

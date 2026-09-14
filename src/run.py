@@ -20,6 +20,7 @@ import sys
 from src.controls import controls_that_moved, read_controls
 from src.evaluate import (
     baseline_accuracy,
+    referral_results,
     permutation_control,
     repeated_cross_validation,
     held_out_results,
@@ -27,7 +28,7 @@ from src.evaluate import (
 from src.fetch_data import find_problems, read_checksums
 from src.load_data import load_data, validate, features_and_labels
 from src.manifest import write_manifest
-from src.model import THRESHOLD, build_model, split_data
+from src.model import BAND, THRESHOLD, build_model, split_data
 
 
 def rule(title):
@@ -104,7 +105,28 @@ def main():
     print(f"  false positives  {results['false_positives']}"
           f"   a benign sample called malignant, and worked up")
 
-    # 6. The control patients. Three samples whose probabilities must not move.
+    # 6. The band in which the model does not answer. The band itself was chosen
+    #    on the training folds (see evaluate.referral_table); this is the one
+    #    time it is applied to the held-out patients.
+    referral = referral_results(results["probabilities"], y_test)
+
+    rule(f"REFERRED FOR REVIEW  (band {BAND[0]} to {BAND[1]})")
+    print(f"  decided automatically  {referral['n_automatic']}")
+    print(f"  referred to a human    {referral['n_referred']}"
+          f"   ({referral['fraction_referred']:.1%} of patients)")
+    print(f"  accuracy of the automatic decisions  {referral['accuracy_automatic']:.3f}"
+          f"   (was {results['accuracy']:.3f} deciding everything)")
+    print(f"  cancers missed automatically  {referral['cancers_missed_automatic']}"
+          f"   (was {results['false_negatives']})")
+    print()
+    for patient, probability in referral["referred_patients"].items():
+        print(f"    {patient:<10} P(malignant) {probability:.3f}   -> pathologist")
+    print()
+    print("  This does not make the model better. Every probability is unchanged.")
+    print("  It routes the model's uncertainty to someone qualified to resolve it,")
+    print("  and it converts errors into work that a person has to do.")
+
+    # 7. The control patients. Three samples whose probabilities must not move.
     #    They are read last because they need the fitted model, and they gate the
     #    manifest: a run whose controls have drifted is not a run worth recording.
     readings = read_controls(model, X)
@@ -122,8 +144,8 @@ def main():
         print("trusted. No manifest was written. Find what changed before rerunning.")
         return 1
 
-    # 7. The record. Written last, and only once everything above has held.
-    path = write_manifest(model, cv_scores, results, readings)
+    # 8. The record. Written last, and only once everything above has held.
+    path = write_manifest(model, cv_scores, results, readings, referral)
 
     rule("RECORDED")
     print(f"  {path}")

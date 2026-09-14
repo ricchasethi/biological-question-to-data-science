@@ -32,7 +32,7 @@ from src.controls import TOLERANCE
 from src.evaluate import FOLD_SEED, N_PERMUTATIONS, PERMUTATION_SEED, REPEAT_SEED
 from src.fetch_data import sha256
 from src.load_data import DATA_FILE
-from src.model import SPLIT_SEED, THRESHOLD
+from src.model import BAND, SPLIT_SEED, THRESHOLD
 
 RESULTS = Path("results")
 MODELS = Path("models")
@@ -78,7 +78,7 @@ def save_model(model):
     return sha256(MODEL_FILE)
 
 
-def build_manifest(model, cv_scores, results, controls):
+def build_manifest(model, cv_scores, results, controls, referral):
     """Assemble everything worth knowing about this run, as a plain dictionary.
 
     The five things worth versioning together get a section each: the input, the
@@ -110,6 +110,7 @@ def build_manifest(model, cv_scores, results, controls):
             "permutation_seed": PERMUTATION_SEED,
             "n_permutations": N_PERMUTATIONS,
             "threshold": THRESHOLD,
+            "referral_band": list(BAND),
         },
         "controls": {
             "tolerance": TOLERANCE,
@@ -129,17 +130,26 @@ def build_manifest(model, cv_scores, results, controls):
             "false_negatives": int(results["false_negatives"]),
             "true_positives": int(results["true_positives"]),
         },
+        # What the system actually claims: the patients it decided on its own.
+        "referral": {
+            "referred_for_review": referral["n_referred"],
+            "fraction_referred": round(referral["fraction_referred"], 4),
+            "decided_automatically": referral["n_automatic"],
+            "accuracy_automatic": round(referral["accuracy_automatic"], 4),
+            "cancers_missed_automatically": referral["cancers_missed_automatic"],
+            "referred_patients": referral["referred_patients"],
+        },
     }
 
 
-def write_manifest(model, cv_scores, results, controls):
+def write_manifest(model, cv_scores, results, controls, referral):
     """Write the manifest for this run and return where it went.
 
     The name carries the timestamp and the first eight characters of the input
     checksum, so a directory listing already tells you when a run happened and
     whether two runs read the same file.
     """
-    manifest = build_manifest(model, cv_scores, results, controls)
+    manifest = build_manifest(model, cv_scores, results, controls, referral)
 
     RESULTS.mkdir(exist_ok=True)
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")

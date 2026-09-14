@@ -32,10 +32,11 @@ biological-question-to-data-science/
 │   ├── manifest.py                   the run record: what produced these numbers
 │   ├── style.py                      the figure colours and settings, fixed once
 │   └── run.py                        the whole analysis, one command, no clicking
-├── tests/                            the controls for the code - 21, in about 2 seconds
+├── tests/                            the controls for the code - 27, in about 2 seconds
 │   ├── test_data.py                  is this the right file, and does the contract hold?
 │   ├── test_analysis.py              the leakage guard, and the published numbers
-│   └── test_record.py                do the controls notice, and is the run recorded?
+│   ├── test_record.py                do the controls notice, and is the run recorded?
+│   └── test_referral.py              the band, and the mistake it does not catch
 ├── data/                             the INPUT - read-only, checksummed
 │   ├── README.md                     where it came from, what it means, what the rules are
 │   ├── checksums.sha256              the identity of the two files below
@@ -155,7 +156,7 @@ One rule is there because of the biology, and it is the reason this job needs a 
 make test
 ```
 
-Twenty-one of them, in about two seconds. They check that the raw file is still the one the
+Twenty-seven of them, in about two seconds. They check that the raw file is still the one the
 articles were written from, that the column names are built in the order the file stores them,
 that the contract accepts the real data and rejects six specific ways of being wrong, that the
 scaler is inside the pipeline where it cannot leak, and that the published numbers - 97.3%
@@ -180,6 +181,51 @@ CONTROL PATIENTS  (read on every run)
 A test tells you the code is right. A control tells you *this run* was right. The borderline one
 is the one that matters: a control at 0.0 and a control at 1.0 survive almost any change, but the
 sample sitting next to the decision boundary moves as soon as anything upstream does.
+
+## When the model should not answer
+
+A model forced to answer every case answers the ones it has no business answering. This one is
+allowed to abstain. `decide()` in `src/model.py` returns three outcomes rather than two, and
+`make run` reports what that costs and what it buys:
+
+```
+REFERRED FOR REVIEW  (band 0.3 to 0.7)
+  decided automatically  110
+  referred to a human    4   (3.5% of patients)
+  accuracy of the automatic decisions  0.991   (was 0.965 deciding everything)
+  cancers missed automatically  1   (was 3)
+```
+
+**Where the band came from matters more than the band.** It is a hyperparameter, and article 3
+was emphatic that anything chosen by looking at the test set has spent it. So it was chosen on
+cross-validated *training* predictions — `referral_table()` in `src/evaluate.py` is the code that
+chose it, and every probability behind that table came from a model that had not seen the patient
+it was scoring:
+
+| band | referred | of the 12 training errors, caught | accuracy on the rest |
+| --- | --- | --- | --- |
+| 0.40 – 0.60 | 8 (1.8%) | 3 | 97.99% |
+| 0.35 – 0.65 | 13 (2.9%) | 6 | 98.64% |
+| **0.30 – 0.70** | **17 (3.7%)** | **8** | **99.09%** |
+| 0.20 – 0.80 | 26 (5.7%) | 9 | 99.30% |
+| 0.10 – 0.90 | 45 (9.9%) | 10 | 99.51% |
+
+The curve rises steeply then flattens. The first few percent of referrals buy most of the errors;
+after that you are sending easy cases to a human for a shrinking return. 0.30–0.70 sits at the bend.
+
+Three honest caveats, all of which matter more than the headline:
+
+- **It does not make the model better.** Every probability is unchanged. It makes the *system*
+  better, by routing the model's uncertainty to someone qualified to resolve it.
+- **It converts errors into work, and a person does that work.** 3.5% sounds free. At 10,000
+  slides a year it is 350 extra expert reviews. A band the pathologist cannot absorb is not a
+  safety feature, it is a queue — so the band is set by capacity as much as by the curve.
+- **It does not catch the error you most want caught.** Patient 859983 is a cancer the model calls
+  benign at P = 0.061 — 94% confident, and completely wrong. She is nowhere near the band, and no
+  widening of it reaches her without referring half the cohort. `test_referral.py` pins this in the
+  test suite so nobody forgets it.
+
+> A model can tell you when it is uncertain. It cannot tell you when it is confidently wrong.
 
 ## The run record: which run produced this number?
 
@@ -223,7 +269,7 @@ README tells you to run:
 
 ```bash
 make verify     # is the raw data the file the articles used?
-make test       # do the 21 controls still pass?
+make test       # do the 27 controls still pass?
 make run        # does the analysis run end to end?
 ```
 

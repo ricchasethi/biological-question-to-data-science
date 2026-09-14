@@ -17,7 +17,7 @@ from sklearn.preprocessing import StandardScaler
 
 from src import manifest
 from src.controls import CONTROLS, controls_that_moved, read_controls
-from src.evaluate import held_out_results
+from src.evaluate import held_out_results, referral_results
 from src.fetch_data import read_checksums
 from src.load_data import DATA_FILE, features_and_labels, load_data, validate
 from src.model import build_model, split_data
@@ -95,7 +95,7 @@ def test_the_manifest_names_the_input_by_checksum(fitted, somewhere_else):
     """
     X, X_test, y_test, model = fitted
     written = manifest.build_manifest(
-        model, _cv_scores(), held_out_results(model, X_test, y_test), read_controls(model, X)
+        model, _cv_scores(), *_outcomes(model, X, X_test, y_test)
     )
 
     expected = {str(path): digest for path, digest in read_checksums().items()}
@@ -108,10 +108,10 @@ def test_the_manifest_names_the_model_by_checksum(fitted, somewhere_else):
     If it did not, the model hash would record nothing except the time of day.
     """
     X, X_test, y_test, model = fitted
-    results, controls = held_out_results(model, X_test, y_test), read_controls(model, X)
+    outcomes = _outcomes(model, X, X_test, y_test)
 
-    first = manifest.build_manifest(model, _cv_scores(), results, controls)
-    second = manifest.build_manifest(model, _cv_scores(), results, controls)
+    first = manifest.build_manifest(model, _cv_scores(), *outcomes)
+    second = manifest.build_manifest(model, _cv_scores(), *outcomes)
 
     assert first["model"]["sha256"] == second["model"]["sha256"]
     assert manifest.MODEL_FILE.exists()
@@ -132,7 +132,7 @@ def test_a_run_writes_one_manifest_that_reads_back(fitted, somewhere_else):
     X, X_test, y_test, model = fitted
 
     path = manifest.write_manifest(
-        model, _cv_scores(), held_out_results(model, X_test, y_test), read_controls(model, X)
+        model, _cv_scores(), *_outcomes(model, X, X_test, y_test)
     )
 
     assert path.parent == manifest.RESULTS
@@ -141,7 +141,14 @@ def test_a_run_writes_one_manifest_that_reads_back(fitted, somewhere_else):
     written = json.loads(path.read_text())
     assert written["results"]["false_negatives"] == 3
     assert written["controls"]["readings"]["879523"]["passed"] is True
+    assert written["referral"]["referred_for_review"] == 4
     assert all(written["environment"]["packages"].values())
+
+
+def _outcomes(model, X, X_test, y_test):
+    """The three things the manifest records about a run: results, controls, referral."""
+    results = held_out_results(model, X_test, y_test)
+    return results, read_controls(model, X), referral_results(results["probabilities"], y_test)
 
 
 def _cv_scores():
