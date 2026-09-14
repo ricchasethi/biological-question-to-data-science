@@ -62,11 +62,17 @@ row, so the order is the only thing that identifies a column.
 The scaler travels inside the pipeline, so the model expects raw measurements on their
 original scale and standardises them itself. Feeding it pre-scaled data is a silent error.
 
-The data contract in `src/load_data.py` states the rest of what the analysis assumes: 569
-rows, no missing values, diagnosis only `B` or `M`, 30-45% malignant, nothing negative, no
+The data contract in `src/load_data.py` states the rest of what the model assumes, in two
+parts. `batch_problems()` holds the rules true of any sample it may score: the thirty
+measurements correctly named, no duplicate ids, no missing values, nothing negative, no
 nucleus of zero size, and the zero-concavity block all-or-nothing in no more than 10% of
-samples. It is a contract for **this file**, not for an incoming batch - see the limits
-below.
+samples (a rate applied only to batches of 30 or more, below which it would fire on chance).
+`cohort_problems()` holds the rules true only of the training file: 569 rows, a diagnosis
+column of `B` and `M`, and 30-45% of them malignant.
+
+**A batch to be scored must carry a header row and an `id` column**, and is read by column
+name (`read_batch()`), not by position. `make predict FILE=...` scores nothing until that
+batch has passed `batch_problems()`.
 
 ## Measured performance
 
@@ -117,16 +123,22 @@ in `tests/test_referral.py` so nobody forgets it.
 
 > A model can tell you when it is uncertain. It cannot tell you when it is confidently wrong.
 
-**2. Silently mislabelled columns.** The file has no header, so column identity is
-positional. Swapping two columns *within* a block - `radius_mean` and `texture_mean`, for
-instance - passes the data contract, produces a plausible accuracy, and moves neither the
-positive-call rate nor the referral rate enough to notice. Only the input checksum catches
-this, and a checksum only exists for `data/wdbc.data`. New data arriving in a different
-column order would be scored wrongly and silently.
+**2. Silently mislabelled columns in the training file.** `wdbc.data` has no header, so
+column identity is positional. Swapping two columns *within* a block - `radius_mean` and
+`texture_mean`, for instance - passes the contract, produces a plausible accuracy, and moves
+neither the positive-call rate nor the referral rate enough to notice. Only the input
+checksum catches it, which is why that file is verified before every run and kept read-only.
 
-**3. The contract does not cover new batches.** It asserts 569 rows and a 30-45% malignant
-fraction, both of which describe the training cohort rather than an incoming sample. A
-batch of 40 new patients fails the contract for reasons that are not defects in the batch.
+This is **closed for new data**: a batch must carry a header and is read by column name, so
+the order it arrives in cannot mislabel anything. The cost of not doing so is measured -
+scoring forty patients from the same file positionally instead of by name changes 25 of the
+40 diagnoses.
+
+**3. A batch cannot be checked against the population it came from.** The prevalence rule
+needs a diagnosis column, and a batch to be scored has none - that is what it is asking for.
+So a batch drawn from a screening clinic rather than a referral clinic passes every rule at
+the entrance and is scored as though it were the validated population. The positive-call
+rate in the batch record is the only signal available, and it is a hint, not a check.
 
 **4. Population change without code change.** Sensitivity and specificity do not carry the
 meaning of a positive result across populations; prevalence does. A change in referral

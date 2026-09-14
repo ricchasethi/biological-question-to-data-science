@@ -59,7 +59,7 @@ jobs:
       - name: Verify the raw data
         run: make verify
 
-      # 5. The controls on the code. Twenty-one of them, about two seconds.
+      # 5. The controls on the code. Forty-five of them, about three seconds.
       - name: Run the tests
         run: make test
 

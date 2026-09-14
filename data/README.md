@@ -50,7 +50,7 @@ Or, doing the same thing and restoring anything missing:
 python -m src.fetch_data --verify
 ```
 
-`wdbc.data` is `d606af41…`. Every number published in articles 2 and 3 was produced from
+`wdbc.data` is `d606af41…`. Every number published in articles 2, 3 and 4 was produced from
 that exact file. A file with the right name and different contents is the failure this
 guards against, and it is not a hypothetical one — the download-and-extract cells that
 used to live in the notebook overwrote these files on every re-run.

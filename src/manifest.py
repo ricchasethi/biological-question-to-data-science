@@ -66,6 +66,22 @@ def code_version():
     return {"commit": commit, "uncommitted_changes": bool(changed)}
 
 
+def environment():
+    """The interpreter and the five packages that can move a number if they move.
+
+    Recording the whole environment is requirements.lock.txt's job. This is the
+    short list you would actually check first, and it is written into every
+    record -- a run record and a batch record alike, because a batch scored under
+    a different scikit-learn is a batch scored by a different model.
+    """
+    return {
+        "python": platform.python_version(),
+        "platform": platform.platform(),
+        "executable": sys.executable,
+        "packages": {name: version(name) for name in RECORDED_PACKAGES},
+    }
+
+
 def save_model(model):
     """Write the fitted pipeline to models/, and return its checksum.
 
@@ -92,12 +108,7 @@ def build_manifest(model, cv_scores, results, controls, referral):
             "sha256": sha256(Path(DATA_FILE)),
         },
         "code": code_version(),
-        "environment": {
-            "python": platform.python_version(),
-            "platform": platform.platform(),
-            "executable": sys.executable,
-            "packages": {name: version(name) for name in RECORDED_PACKAGES},
-        },
+        "environment": environment(),
         "model": {
             "file": str(MODEL_FILE),
             "sha256": save_model(model),
@@ -156,3 +167,71 @@ def write_manifest(model, cv_scores, results, controls, referral):
     path = RESULTS / f"run-{stamp}-{manifest['input']['sha256'][:8]}.json"
     path.write_text(json.dumps(manifest, indent=2) + "\n")
     return path
+
+
+# --- the batch record -------------------------------------------------------
+# A scoring job needs the same treatment as a run, for the same reason. Somebody
+# will hold up a decision about a patient and ask what produced it. "The model"
+# is not an answer: which model, fitted from which data, by which code, under
+# which library versions, and what did the batch look like on the way in?
+
+
+def batch_paths(batch_file):
+    """Where this batch's predictions and record will go. One stamp, two files.
+
+    The names carry the timestamp and the first eight characters of the input
+    checksum, exactly as a run manifest does, so a directory listing says when a
+    batch was scored and whether two jobs read the same file. They are built
+    together so the CSV and the JSON that describes it can never drift apart.
+    """
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    short = sha256(Path(batch_file))[:8]
+
+    RESULTS.mkdir(exist_ok=True)
+    return (RESULTS / f"batch-{stamp}-{short}.csv",
+            RESULTS / f"batch-{stamp}-{short}.json")
+
+
+def write_batch_record(record_file, batch_file, model_sha, decisions, probabilities,
+                       predictions_file):
+    """Record one scoring job, next to the run records, and return where it went.
+
+    The rates are in here on purpose. Accuracy cannot be computed for a batch --
+    nobody knows the answers yet, and in biology they may be months away. The
+    positive-call rate and the referral rate are knowable on the day, from the
+    output alone, and a large move in either says the incoming population or the
+    measurements have changed before any label arrives to confirm it.
+    """
+    counts = {outcome: int((decisions == outcome).sum())
+              for outcome in ["benign", "refer", "malignant"]}
+
+    record = {
+        "batch_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "input": {
+            "file": str(batch_file),
+            "sha256": sha256(Path(batch_file)),
+            "n_samples": len(decisions),
+        },
+        "code": code_version(),
+        "environment": environment(),
+        "model": {
+            "file": str(MODEL_FILE),
+            "sha256": model_sha,
+            "description": "StandardScaler + LogisticRegression, 30 features",
+        },
+        "settings": {
+            "threshold": THRESHOLD,
+            "referral_band": list(BAND),
+        },
+        "outcome": {
+            "counts": counts,
+            # The two numbers worth watching from one batch to the next.
+            "positive_call_rate": round(counts["malignant"] / len(decisions), 4),
+            "referral_rate": round(counts["refer"] / len(decisions), 4),
+            "mean_probability": round(float(probabilities.mean()), 4),
+            "predictions": str(predictions_file),
+        },
+    }
+
+    record_file.write_text(json.dumps(record, indent=2) + "\n")
+    return record_file

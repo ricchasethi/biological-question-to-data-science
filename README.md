@@ -2,15 +2,28 @@
 
 [![reproduce](https://github.com/ricchasethi/biological-question-to-data-science/actions/workflows/ci.yml/badge.svg)](https://github.com/ricchasethi/biological-question-to-data-science/actions/workflows/ci.yml)
 
-Companion code for **articles 2 and 3** of *Research to Production - Data Science Biologist* (`https://research-to-production.beehiiv.com/`).
+Companion code for *[Research to Production - A Data Science Biologist](https://research-to-production.beehiiv.com/)*, a three-article series that takes one dataset the whole way from a question asked down a microscope to a system somebody else can run.
 
 The question the whole analysis serves:
 
 > **Can measurements taken from a breast tumour sample be used to distinguish a malignant tumour from a benign one?**
 
-Article 2 turns that question into data you understand. Article 3 turns the data into a model, and then spends most of its time trying to break it.
+One dataset, four articles, each one ending where the next begins:
 
-Article 3 is organised around one idea: **a model is an experiment, so it needs controls.** You would not run an assay without a blank, a negative control and replicates. The notebook runs the equivalent four on the model, and reports them alongside the accuracy.
+```
+   Biology    →     Data      →     Model      →   Production
+  the question   what a row is   and its limits   reproducible & scalable
+```
+
+| | | |
+| --- | --- | --- |
+| 1 | [From a Biological Question to Data: Our First Data Science Project](https://research-to-production.beehiiv.com/p/from-a-biological-question-to-data-our-first-data-science-project-063a) | get the file, look at it, and find the differences you can see |
+| 2 | [From Data to a Model You Can Defend](https://research-to-production.beehiiv.com/p/from-biological-data-to-model-our-first-data-science-project) | test those differences, build the model, then try to break it |
+| 3 | [From Notebook to Production: The Bioinformatics & Data Science Stack a Biologist Actually Needs](https://research-to-production.beehiiv.com/p/from-notebook-to-production-the-bioinformatics-tech-stack-a-biologist-actually-needs) | rebuild the analysis as something other people can depend on |
+
+**The series is complete, and this repository is what it produced.** Articles 1 and 2 are the two notebooks: the data, then the model and the controls that decide whether to believe it. Article 3 is everything around them - `src/`, the tests, the data contract, the run records, the model card, the scoring job and the CI badge above.
+
+One idea runs through all of it: **a model is an experiment, so it needs controls.** You would not run an assay without a blank, a negative control and replicates. This runs the equivalent on the model, on the data, on the code and on every individual run - and reports them alongside the accuracy.
 
 ---
 
@@ -18,8 +31,8 @@ Article 3 is organised around one idea: **a model is an experiment, so it needs 
 
 ```
 biological-question-to-data-science/
-├── exploratory_data_analysis.ipynb   article 2 - the data   (31 code cells, outputs saved)
-├── data_to_model.ipynb               article 3 - the model  (45 code cells, outputs saved)
+├── exploratory_data_analysis.ipynb   article 1 - the data   (31 code cells, outputs saved)
+├── data_to_model.ipynb               article 2 - the model  (45 code cells, outputs saved)
 ├── MODEL_CARD.md                     the label that travels with the model
 ├── Makefile                          the commands, so nobody has to remember them
 ├── requirements.txt                  the packages this project asks for, pinned
@@ -32,12 +45,14 @@ biological-question-to-data-science/
 │   ├── controls.py                   the three patients read on every run
 │   ├── manifest.py                   the run record: what produced these numbers
 │   ├── style.py                      the figure colours and settings, fixed once
-│   └── run.py                        the whole analysis, one command, no clicking
-├── tests/                            the controls for the code - 29, in about 2 seconds
+│   ├── run.py                        the whole analysis, one command, no clicking
+│   └── predict.py                    score a batch of new samples, and record the job
+├── tests/                            the controls for the code - 45, in about 3 seconds
 │   ├── test_data.py                  is this the right file, and does the contract hold?
 │   ├── test_analysis.py              the leakage guard, and the published numbers
 │   ├── test_record.py                do the controls notice, is the run recorded, is the card true?
-│   └── test_referral.py              the band, and the mistake it does not catch
+│   ├── test_referral.py              the band, and the mistake it does not catch
+│   └── test_batch.py                 the contract at the entrance, read by name not position
 ├── data/                             the INPUT - read-only, checksummed
 │   ├── README.md                     where it came from, what it means, what the rules are
 │   ├── checksums.sha256              the identity of the two files below
@@ -48,27 +63,13 @@ biological-question-to-data-science/
 ├── results/                          one manifest per run, never overwritten (untracked)
 ├── models/                           the fitted pipeline, rebuilt every run (untracked)
 └── figures/                          generated by the notebooks
-    ├── radius-histogram.png            article 2, section 6
-    ├── four-features-boxplots.png      article 2, section 6
-    ├── size-vs-shape-scatter.png       article 2, section 6
-    ├── correlation-heatmap.png         article 2, section 6
-    ├── effect-sizes.png                article 3, section 2 - how big the differences are
-    ├── logistic-sigmoid.png            article 3, section 3 - measurement to probability
-    ├── predicted-probabilities.png     article 3, section 3 - where the threshold sits
-    ├── permutation-null.png            article 3, section 6 - the negative control
-    ├── confusion-matrix.png            article 3, section 7 - the four outcomes
-    ├── roc-and-pr-curves.png           article 3, section 7 - threshold-free metrics
-    ├── threshold-tradeoff.png          article 3, section 7 - moving the threshold moves the harm
-    ├── overfitting.png                 article 3, section 8 - memorising is not learning
-    ├── leakage-noise.png               article 3, section 8 - signal invented from pure noise
-    └── features-and-pca.png            article 3, section 9 - do we need all thirty?
 ```
 
 `figures/` is an **output**, regenerated by running the notebooks. Delete it and it rebuilds.
 
-`data/` is not. It is the **input**, and it is treated the way a laboratory treats a sample: it
+`data/` is the **input**, and it is treated the way a laboratory treats a sample: it
 arrives once, it is labelled with a checksum, and it is read-only (`chmod 444`) from then on.
-Every number in articles 2 and 3 was produced from `wdbc.data` with SHA-256 `d606af41...`, and the
+Every number in articles 1, 2 and 3 was produced from `wdbc.data` with SHA-256 `d606af41...`, and the
 analysis refuses to run against a file that does not match. See `data/README.md`.
 
 Run `exploratory_data_analysis.ipynb` first: it loads the data that `data_to_model.ipynb` then models.
@@ -120,6 +121,7 @@ make            # get the data if needed, run the controls, then run the analysi
 make verify     # check the raw data, touching nothing
 make test       # the controls on the code, about 2 seconds
 make run        # the analysis on its own, about 20 seconds, and writes a manifest
+make predict FILE=batch.csv   # score a batch of new samples with the fitted model
 ```
 
 `make run` starts from `data/wdbc.data` every time, in a fixed order, and prints the same
@@ -135,12 +137,25 @@ running at all.
 A laboratory does not trust a reagent because the tube has the right label on it. It runs a
 control. The same two ideas apply to an analysis, and both live in this repository.
 
-**The data contract** is `validate()` in `src/load_data.py`. It is the list of things this
-analysis assumes about its input, written down as code rather than left in someone's head: 569
-rows, the thirty columns in the right order, no missing values, no duplicate patients, nothing
-negative, no nucleus with zero size, and a class balance inside the 30-45% malignant the model
-was validated on. `make run` checks it before computing anything, reports *every* rule that
-failed rather than just the first, and stops.
+**The data contract** is in `src/load_data.py`. It is the list of things this analysis assumes
+about its input, written down as code rather than left in someone's head: the thirty columns
+correctly named, no missing values, no duplicate patients, nothing negative, no nucleus with
+zero size, 569 rows, and a class balance inside the 30-45% malignant the model was validated
+on. `make run` checks it before computing anything, reports *every* rule that failed rather
+than just the first, and stops.
+
+Those rules are not all the same kind of rule, and the file keeps them apart:
+
+| | |
+| --- | --- |
+| `batch_problems()` | what is true of **any** sample this model may score - thirty named measurements, nothing missing, nothing negative, no nucleus of zero size |
+| `cohort_problems()` | what is true of **this file only** - 569 rows, a diagnosis column, 37% of them malignant |
+
+`validate()` applies both, because the training file is the one table claiming to be the
+dataset the published numbers came from. `validate_batch()` applies the first set alone.
+A batch of forty new patients breaks every cohort rule by existing, and that is not a defect
+in the batch - it is the difference between a rule about data and a rule about a cohort. A
+contract that cannot tell them apart can only ever be used on the file it was written for.
 
 One rule is there because of the biology, and it is the reason this job needs a biologist:
 
@@ -157,7 +172,7 @@ One rule is there because of the biology, and it is the reason this job needs a 
 make test
 ```
 
-Twenty-nine of them, in about two seconds. They check that the raw file is still the one the
+Forty-five of them, in about three seconds. They check that the raw file is still the one the
 articles were written from, that the column names are built in the order the file stores them,
 that the contract accepts the real data and rejects six specific ways of being wrong, that the
 scaler is inside the pipeline where it cannot leak, and that the published numbers - 97.3%
@@ -260,6 +275,46 @@ was worth keeping. Nothing there is ever overwritten, and neither `results/` nor
 committed: the run records are yours, and the model is rebuilt by the pipeline that records its
 checksum.
 
+## Scoring new samples: the contract at the entrance
+
+`make run` answers *is this model any good?* It refits, measures and reports on data whose
+answers are already known. It cannot score a patient nobody has diagnosed yet, which is the
+only thing a model is ultimately for.
+
+```bash
+make predict FILE=data/incoming/2026-09-14.csv
+```
+
+A batch does not go through `load_data()`. It goes through `read_batch()`, and the difference
+is the point:
+
+> **`wdbc.data` has no header row, so its columns are identified by position.** Swap two of
+> them and every downstream number is wrong with nothing crashing. That is survivable for one
+> fixed file that is verified by checksum before every run. It is not survivable at the
+> entrance to a scoring job, where the file is new every time and there is no checksum to
+> compare it against. So **a batch must carry a header, and is read by column name.** The
+> order it arrives in stops mattering, which removes the failure instead of guarding against it.
+
+That is not a theoretical improvement. Scoring the same forty patients from the same file,
+read positionally instead of by name, changes **25 of the 40 diagnoses** - and produces a
+clean-looking output either way. `tests/test_batch.py` holds both halves of that.
+
+The job scores nothing until the batch has passed `validate_batch()`, loads the model from
+`models/model.joblib` rather than refitting one, and leaves two files behind:
+
+```
+results/batch-20260914T040152Z-d4d3a44e.csv    one row per sample: id, probability, decision
+results/batch-20260914T040152Z-d4d3a44e.json   the input, model, code and environment, by checksum
+```
+
+named together from one timestamp and the input's checksum, so they cannot drift apart.
+
+**It reports no accuracy, and that is deliberate.** Nobody knows the answers yet; in biology
+they may be months away. What the record carries instead is the **positive-call rate** and the
+**referral rate**, which are knowable on the day from the output alone. A large move in either
+says the incoming population or the measurements have changed, long before a label arrives to
+confirm it.
+
 ## The model card: the label that travels with the model
 
 `MODEL_CARD.md` is the document somebody reads when they did not build this and have to decide
@@ -290,7 +345,7 @@ README tells you to run:
 
 ```bash
 make verify     # is the raw data the file the articles used?
-make test       # do the 29 controls still pass?
+make test       # do the 45 controls still pass?
 make run        # does the analysis run end to end?
 ```
 
@@ -433,12 +488,24 @@ Method - Street, W. N., Wolberg, W. H., & Mangasarian, O. L. (1993). Nuclear fea
 
 Licence terms are stated on the [dataset page](https://archive.ics.uci.edu/dataset/17/breast+cancer+wisconsin+diagnostic).
 
-## Next
+## Where the series ends
 
-We end with a model, an honest estimate of its performance, and four controls saying that estimate is not an illusion.
+Article 2 ended on the hinge: a model, an honest estimate of its performance, and four controls saying that estimate is not an illusion - living in **two notebooks, on one laptop**, run in whatever order the cells happened to be clicked, with library versions nobody had written down. Correct, and not yet something anyone else could depend on.
 
-And that is where the series turns. Everything here lives in **two notebooks, on one laptop**, for thirty features and 569 samples that arrived in a single 124 KB file. They run when I run them, in the order I happen to run the cells, with library versions nobody wrote down.
+[**Article 3**](https://research-to-production.beehiiv.com/p/from-notebook-to-production-the-bioinformatics-tech-stack-a-biologist-actually-needs) is the rest of that sentence, and it is this repository:
 
-**Article 4** rebuilds the same analysis as software: project structure, version control, functions and scripts and environments, pipelines that run end to end without a human clicking cells, what breaks when it is 20,000 genes instead of 30 features, and what "production" actually means.
+| | |
+| --- | --- |
+| the notebook became a project | `src/`, `tests/`, `data/`, `results/`, a pinned environment, a README |
+| the analysis became one command | `make run` - same order, same seeds, no clicking, ~20 seconds |
+| the assumptions became checks | a data contract that reports every rule that failed, and stops |
+| the tests became controls | 45 of them, including three patients read on every single run |
+| the run became a record | one manifest per run, naming input, code, environment and model by checksum |
+| the model got a label | `MODEL_CARD.md`, including what it is known to get wrong |
+| the model learned to abstain | a referral band, chosen on training folds, that turns three missed cancers into one |
+| the model got something to score | `make predict FILE=...`, with the contract moved to the entrance |
+| and somebody else's machine proves it | the badge at the top, rebuilt from the lock file on every push |
 
-The analysis is correct. It is not yet something anyone else can depend on.
+The progression the whole series walks: **Research → Reproducible Research → Pipeline → Production.**
+
+> *We started with a question a pathologist asks down a microscope, and finished with a system that answers it the same way every time, for anyone who runs it. The dataset was small on purpose. The habits are not.*
